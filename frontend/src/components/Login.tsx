@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react'
 import { AuthService } from '../services/auth'
 
@@ -15,20 +14,26 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log(`🎯 FORM SUBMIT: ${isLogin ? 'Login' : 'Register'} attempt for ${email}`);
     setError('')
     setLoading(true)
 
     try {
       let response
       if (isLogin) {
+        console.log('📝 Calling login service...');
         response = await AuthService.login(email, password)
       } else {
+        console.log('📝 Calling register service...');
         response = await AuthService.register(email, password)
       }
-      
+
       onLogin(response.access_token)
+      console.log('🎉 Authentication successful, redirecting...');
     } catch (error: any) {
-      setError(error.response?.data?.detail || 'Authentication failed')
+      const errorMsg = error.response?.data?.detail || 'Authentication failed';
+      console.error('💥 Authentication error:', errorMsg);
+      setError(errorMsg);
     } finally {
       setLoading(false)
     }
@@ -39,7 +44,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="login-card">
         <h1>CrossMessenger</h1>
         <p className="subtitle">Connect Telegram, Instagram & Internal Chat</p>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Email:</label>
@@ -50,7 +55,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               required
             />
           </div>
-          
+
           <div className="form-group">
             <label>Password:</label>
             <input
@@ -60,14 +65,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               required
             />
           </div>
-          
+
           {error && <div className="error">{error}</div>}
-          
+
           <button type="submit" disabled={loading}>
             {loading ? 'Loading...' : (isLogin ? 'Login' : 'Register')}
           </button>
         </form>
-        
+
         <p className="switch-mode">
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button 

@@ -18,9 +18,12 @@ class Database:
         )
         
     async def get_user_by_email(self, email: str) -> Optional[Dict]:
+        logger.info(f"🔍 DB: Looking up user by email={email}")
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow("SELECT * FROM users WHERE email = $1", email)
-            return dict(row) if row else None
+            result = dict(row) if row else None
+            logger.info(f"{'✅' if result else '❌'} DB: User {'found' if result else 'not found'}")
+            return result
             
     async def get_user_by_id(self, user_id: str) -> Optional[Dict]:
         async with self.pool.acquire() as conn:
@@ -28,11 +31,13 @@ class Database:
             return dict(row) if row else None
             
     async def create_user(self, email: str, password_hash: str) -> str:
+        logger.info(f"💾 DB: Creating user with email={email}")
         async with self.pool.acquire() as conn:
             user_id = await conn.fetchval(
                 "INSERT INTO users (email, password_hash, created_at) VALUES ($1, $2, $3) RETURNING id",
                 email, password_hash, datetime.utcnow()
             )
+            logger.info(f"✅ DB: User created with ID={user_id}")
             return str(user_id)
             
     async def create_account(self, user_id: str, platform: str, platform_account_id: str, session_encrypted: str) -> str:

@@ -1,4 +1,3 @@
-
 import axios from 'axios'
 import { AuthService } from './auth'
 
@@ -8,14 +7,27 @@ const apiClient = axios.create({
   baseURL: API_BASE
 })
 
-// Add auth header to all requests
+// Add API request/response logging
 apiClient.interceptors.request.use((config) => {
+  console.log(`🌐 API REQUEST: ${config.method?.toUpperCase()} ${config.url}`, config.data);
   const token = AuthService.getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
+
+// Log responses and errors
+apiClient.interceptors.response.use(
+  (response) => {
+    console.log(`✅ API RESPONSE: ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
+    return response;
+  },
+  (error) => {
+    console.error(`❌ API ERROR: ${error.config?.method?.toUpperCase()} ${error.config?.url}`, error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
 
 export class ApiService {
   static async getAccounts() {
