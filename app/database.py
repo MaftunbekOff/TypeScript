@@ -176,39 +176,39 @@ async def init_db():
     if db.pool:
         # PostgreSQL
         async with db.pool.acquire() as conn:
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        """)
-        
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS accounts (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                platform VARCHAR(50) NOT NULL,
-                platform_account_id VARCHAR(255) NOT NULL,
-                session_encrypted TEXT,
-                created_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(user_id, platform, platform_account_id)
-            )
-        """)
-        
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS chats (
-                id SERIAL PRIMARY KEY,
-                account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
-                chat_id VARCHAR(255) NOT NULL,
-                title VARCHAR(255),
-                last_message_at TIMESTAMP DEFAULT NOW(),
-                UNIQUE(account_id, chat_id)
-            )
-        """)
-        
-        await conn.execute("""
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS accounts (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    platform VARCHAR(50) NOT NULL,
+                    platform_account_id VARCHAR(255) NOT NULL,
+                    session_encrypted TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    UNIQUE(user_id, platform, platform_account_id)
+                )
+            """)
+            
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS chats (
+                    id SERIAL PRIMARY KEY,
+                    account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+                    chat_id VARCHAR(255) NOT NULL,
+                    title VARCHAR(255),
+                    last_message_at TIMESTAMP DEFAULT NOW(),
+                    UNIQUE(account_id, chat_id)
+                )
+            """)
+            
+            await conn.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
                     id SERIAL PRIMARY KEY,
                     chat_id VARCHAR(255) NOT NULL,
