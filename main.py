@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -42,13 +41,13 @@ async def lifespan(app: FastAPI):
         global db
         db = await init_db()
         logger.info("✅ BACKEND: Database initialized")
-        
+
         try:
             await telegram_service.start()
             logger.info("✅ BACKEND: Telegram service started")
         except Exception as e:
             logger.warning(f"⚠️  BACKEND: Telegram service failed to start: {e}")
-            
+
         logger.info("🎉 BACKEND: CrossMessenger started successfully on port 5000")
         yield
     except Exception as e:
@@ -67,7 +66,7 @@ app = FastAPI(title="CrossMessenger API", lifespan=lifespan)
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://0.0.0.0:3000"],
+    allow_origins=["http://0.0.0.0:3000", "http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -112,24 +111,24 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 @app.post("/api/auth/register")
 async def register(user_data: UserRegistration):
     logger.info(f"🔐 REGISTER ATTEMPT: Email={user_data.email}")
-    
+
     try:
         # Check if user exists
         existing_user = await db.get_user_by_email(user_data.email)
         if existing_user:
             logger.warning(f"❌ REGISTER FAILED: User {user_data.email} already exists")
             raise HTTPException(status_code=400, detail="User already exists")
-        
+
         # Hash password
         password_hash = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        
+
         # Create user
         user_id = await db.create_user(user_data.email, password_hash)
         token = create_access_token(user_id)
-        
+
         logger.info(f"✅ REGISTER SUCCESS: User ID={user_id}, Email={user_data.email}")
         return {"access_token": token, "token_type": "bearer"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -139,12 +138,12 @@ async def register(user_data: UserRegistration):
 @app.post("/api/auth/login")
 async def login(user_data: UserLogin):
     logger.info(f"🔑 LOGIN ATTEMPT: Email={user_data.email}")
-    
+
     user = await db.get_user_by_email(user_data.email)
     if not user or not bcrypt.checkpw(user_data.password.encode('utf-8'), user['password_hash'].encode('utf-8')):
         logger.warning(f"❌ LOGIN FAILED: Invalid credentials for {user_data.email}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
     token = create_access_token(user['id'])
     logger.info(f"✅ LOGIN SUCCESS: User ID={user['id']}, Email={user_data.email}")
     return {"access_token": token, "token_type": "bearer"}
@@ -187,7 +186,7 @@ async def instagram_callback(code: str, state: str, user: dict = Depends(get_cur
 @app.post("/api/messages/send")
 async def send_message(request: SendMessageRequest, user: dict = Depends(get_current_user)):
     logger.info(f"📤 SENDING MESSAGE: User={user['email']}, Platform={request.platform}, Chat={request.chat_id}")
-    
+
     try:
         if request.platform == "telegram":
             message_id = await telegram_service.send_message(
@@ -204,7 +203,7 @@ async def send_message(request: SendMessageRequest, user: dict = Depends(get_cur
         else:
             logger.error(f"❌ INVALID PLATFORM: {request.platform}")
             raise HTTPException(status_code=400, detail="Invalid platform")
-        
+
         logger.info(f"✅ MESSAGE SENT: ID={message_id}, Platform={request.platform}")
         return {"message_id": message_id}
     except Exception as e:
