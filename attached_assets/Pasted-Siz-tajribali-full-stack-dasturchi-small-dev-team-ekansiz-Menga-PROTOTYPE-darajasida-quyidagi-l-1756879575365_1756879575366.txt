@@ -1,0 +1,141 @@
+Siz tajribali full-stack dasturchi / small dev-team ekansiz. 
+Menga PROTOTYPE darajasida quyidagi loyihani toʻliq yaratib bering: 
+“CrossMessenger — Telegram (MTProto) + Instagram (Meta Graph) + Internal Chat bitta Web App’da”.
+
+Loyiha maqsadi:
+- Foydalanuvchi web-app orqali Telegram va Instagram akkauntlarini bogʻlaydi.
+- Telegram (MTProto orqali) va Instagram (Meta Graph / OAuth orqali) dan kelgan xabarlar unified formatda olinib, Web UI’da real-time koʻrinadi.
+- Platformaning ichki chat tizimi ham mavjud: sayt foydalanuvchilari bir-biri bilan xabar almashadi.
+- Foydalanuvchi istasa Telegram ↔ Internal yoki Instagram ↔ Internal orqali ham yozishishi mumkin (biroz cheklangan prototype qoidalari bilan — 1-to-1 chat va basic attachments).
+
+Talimlar — texnik talablar (ancha batafsil):
+1) Tech stack (ustuvor):
+   - Backend: Python 3.11, FastAPI.
+   - Telegram client: Telethon (MTProto).
+   - Instagram: Meta Graph API (OAuth) - Direct Messages imkoniyatlari (yoki Graph API imkoniyatlari doirasida demo mock endpoint agar real DM read cheklangan bo‘lsa).
+   - Real-time: WebSocket (FastAPI WebSockets) yoki Socket.io (agar Node kabi kerak boʻlsa, shunga mos yozing).
+   - Frontend: React + TypeScript (Vite recommended).
+   - DB: PostgreSQL (SQLAlchemy / asyncpg yoki Tortoise ORM).
+   - Optionally: Redis (pub/sub, session caching).
+   - Containerization: Docker + docker-compose.
+
+2) Auth / Login flows:
+   - Telegram: MTProto login (api_id/api_hash via my.telegram.org). Foydalanuvchi telefon raqamini kiritadi, server Telethon orqali code yuboradi, foydalanuvchi kodni kiritadi. Session StringSession yoki session fayli serverda AES-256 bilan shifrlangan holda saqlansin.
+   - Instagram: OAuth via Meta Graph (redirect flow). Foydalanuvchi ruxsat berdi — access_token shifrlangan holda DBda saqlansin.
+   - Internal: standard email/password (minimal), JWT tokens for web sessions.
+
+3) Unified message format (har platforma uchun bitta format):
+   {
+     "platform": "telegram|instagram|internal",
+     "account_id": "string",        // bizning account id yoki platform account id
+     "chat_id": "string",
+     "sender_id": "string",
+     "sender_name": "string",
+     "message_id": "string",
+     "text": "string",
+     "attachments": [{"type":"photo|file|video","url":"string","meta":{}}], 
+     "timestamp": "ISO8601",
+     "status": "sent|delivered|read"
+   }
+
+4) Minimal API endpoints (backend):
+   - POST /api/auth/telegram/start  { phone } -> trigger code send
+   - POST /api/auth/telegram/verify { phone, code } -> finish login, return user token
+   - GET  /api/auth/instagram/url -> return OAuth URL
+   - GET  /api/auth/instagram/callback -> handle token store
+   - POST /api/messages/send -> send message (body includes platform, target chat_id, text, from_account)
+   - GET  /api/chats -> list chats for user (unified)
+   - GET  /api/chats/{chat_id}/messages?limit=50 -> fetch messages
+   - WebSocket /ws -> push events: message:new, message:updated, connection:status
+
+5) DB schema (minimal):
+   - users (id, email, password_hash, created_at)
+   - accounts (id, user_id, platform, platform_account_id, session_encrypted, created_at)
+   - chats (id, account_id, chat_id, title, last_message_at)
+   - messages (id, chat_id, platform, platform_message_id, sender_id, sender_name, text, attachments_json, timestamp, status)
+   - optional: oauth_tokens, audit_logs
+
+6) Security & privacy:
+   - Barcha sessiyalar / platform tokenlari AES-256 bilan server-side shifrlangan (env ENCRYPTION_KEY).
+   - HTTPS required (READMEda local dev sertifikat yoki Replit HTTPS info).
+   - "Delete my data" endpoint: darhol account bilan bogʻliq session va messages ni butunlay oʻchiradi.
+   - Privacy consent: Login flowda foydalanuvchi toʻliq rozilik ekrani ko‘rsatiladi (short policy).
+   - Rate limiting va input validation.
+
+7) Deliverables:
+   - Complete repo skeleton: /backend, /frontend, /docker-compose.yml, .env.example, README.md
+   - Backend implementation: FastAPI app with endpoints, Telethon integration script (async worker) that:
+       • can start a session for a connected user,
+       • listen to new messages (events.NewMessage) and push to the WebSocket or store to DB.
+   - Instagram integration: OAuth flow + demo of fetching messages (or mock if Graph API restricted). Include instructions for setting up Facebook Developer app.
+   - Frontend: React app with:
+       • Login/connect UI (Telegram start/verify, Instagram connect),
+       • Chat list & messages view,
+       • WebSocket realtime updates,
+       • Message composer that can choose platform/account to send from.
+   - Dockerfile for backend and frontend + docker-compose with Postgres.
+   - README detailing env vars, how to run locally, how to configure my.telegram.org and Facebook Developer app, and how to run in Replit.
+   - Minimal tests: a few pytest async tests for backend endpoints and a smoke test for Telethon handler (mocked).
+   - Security checklist & "how to delete user data" doc.
+
+8) Acceptance criteria (must pass):
+   - After connecting Telegram account, the last 50 messages of selected chats are fetchable and displayed in frontend.
+   - New Telegram messages appear in frontend in near real-time (≤2s).
+   - After connecting Instagram (if DM access allowed), messages are visible in unified feed (or show clear mock behavior and instructions if Graph API doesn't permit full DM access).
+   - Internal chat messages between two users are stored and delivered real-time.
+   - "Disconnect" removes session and stops receiving messages.
+   - README contains step by step: env vars, run commands, and how to provision API_ID/API_HASH and Meta App credentials.
+
+9) Environment variables (provide in .env.example):
+   - API_ID (telegram)
+   - API_HASH (telegram)
+   - FACEBOOK_APP_ID
+   - FACEBOOK_APP_SECRET
+   - JWT_SECRET
+   - DATABASE_URL (postgres)
+   - REDIS_URL (optional)
+   - ENCRYPTION_KEY (for session encryption)
+   - FRONTEND_URL
+   - BACKEND_URL
+
+10) Implementation constraints / notes for the agent:
+   - Use Telethon’s async client; don’t block event loop with sync HTTP calls.
+   - For external HTTP calls from event handlers, use aiohttp.
+   - Session storage: use Telethon StringSession and store encrypted string in DB.
+   - For Replit demo, it’s acceptable to mock Instagram DM reading if Graph API access is restricted — but include clear comments where to replace mock with real Graph calls.
+   - Keep the prototype minimal but production-minded: configuration via env vars, no hardcoded secrets.
+
+11) Project structure suggestion:
+   /backend
+     ├─ app/
+     │   ├─ main.py
+     │   ├─ api/
+     │   ├─ services/
+     │   ├─ telethon_client.py
+     │   ├─ instagram.py
+     │   └─ models.py
+     ├─ Dockerfile
+     └─ requirements.txt
+   /frontend
+     ├─ src/
+     │  ├─ App.tsx
+     │  ├─ components/
+     │  └─ services/
+     └─ Dockerfile
+   docker-compose.yml
+   README.md
+   .env.example
+
+12) Extra: please include example curl commands for:
+   - starting telegram login
+   - verifying code
+   - sending a message via /api/messages/send
+
+13) Time/effort note: this is a prototype — prioritize correctness of MTProto flow, real-time messaging, secure session storage, and clear README showing how to swap mock Instagram for real Graph API.
+
+---
+
+Yuqoridagi barcha talablarni bajaring: backend + frontend + docker + README + minimal tests, va pull request / zip orqali topshiriq qilib bering. 
+Agar Instagram DM haqiqiy olish uchun Graph API cheklovlari mavjud bo‘lsa, buni READMEda aniq yozing va mock server bilan qanday almashtirishni ko‘rsating.
+
+Rahmat — endi shu prompt orqali loyiha boshlang.
