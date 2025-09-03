@@ -1,37 +1,58 @@
-run = "tsx index.ts"
-entrypoint = "index.ts"
+
+run = "python3 main.py"
+entrypoint = "main.py"
 hidden = [".config", "package-lock.json", "tsconfig.json"]
-modules = ["nodejs-20"]
+modules = ["python-3.11", "nodejs-20"]
 
 [nix]
 channel = "stable-24_05"
 
 [gitHubImport]
-requiredFiles = [".replit", "replit.nix", ".config"]
+requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["tsx", "index.ts"]
+run = ["python3", "main.py"]
 deploymentTarget = "cloudrun"
 ignorePorts = false
 
 [[ports]]
-localPort = 3000
+localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 3000
+externalPort = 3000
 
 [agent]
 expertMode = true
 
 [workflows]
-runButton = "Run"
+runButton = "Start CrossMessenger"
 
 [[workflows.workflow]]
-name = "Run"
-author = 45696961
+name = "Start CrossMessenger"
+author = "user"
 mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python main.py"
+args = "python3 main.py"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && npm install && npm run dev"
+
+[[workflows.workflow]]
+name = "Backend Only"
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 main.py"
+
+[[workflows.workflow]]
+name = "Frontend Only"
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
