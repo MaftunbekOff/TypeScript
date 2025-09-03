@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Dict, Optional, Any
 import asyncio
@@ -66,11 +67,17 @@ app = FastAPI(title="CrossMessenger API", lifespan=lifespan)
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://0.0.0.0:3000", "http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["http://0.0.0.0:5000", "http://localhost:5000", "http://127.0.0.1:5000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files (frontend build)
+import os
+if os.path.exists("frontend/dist"):
+    app.mount("/static", StaticFiles(directory="frontend/dist"), name="static")
+    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
 
 security = HTTPBearer()
 
