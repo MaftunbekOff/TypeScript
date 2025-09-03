@@ -1,0 +1,67 @@
+Login.tsx:17 🎯 FORM SUBMIT: Register attempt for maftunbekuroqov@gmail.com
+Login.tsx:27 📝 Calling register service...
+auth.ts:35 🔐 FRONTEND: Attempting registration for maftunbekuroqov@gmail.com
+auth.ts:37  POST http://192.168.100.156:3000/api/auth/register 500 (Internal Server Error)
+dispatchXhrRequest @ axios.js?v=61103e6b:1683
+xhr @ axios.js?v=61103e6b:1563
+dispatchRequest @ axios.js?v=61103e6b:2038
+_request @ axios.js?v=61103e6b:2259
+request @ axios.js?v=61103e6b:2150
+httpMethod @ axios.js?v=61103e6b:2288
+wrap @ axios.js?v=61103e6b:8
+register @ auth.ts:37
+handleSubmit @ Login.tsx:28
+callCallback2 @ chunk-C73SNUHP.js?v=663168f1:3674
+invokeGuardedCallbackDev @ chunk-C73SNUHP.js?v=663168f1:3699
+invokeGuardedCallback @ chunk-C73SNUHP.js?v=663168f1:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-C73SNUHP.js?v=663168f1:3736
+executeDispatch @ chunk-C73SNUHP.js?v=663168f1:7016
+processDispatchQueueItemsInOrder @ chunk-C73SNUHP.js?v=663168f1:7036
+processDispatchQueue @ chunk-C73SNUHP.js?v=663168f1:7045
+dispatchEventsForPlugins @ chunk-C73SNUHP.js?v=663168f1:7053
+(anonymous) @ chunk-C73SNUHP.js?v=663168f1:7177
+batchedUpdates$1 @ chunk-C73SNUHP.js?v=663168f1:18941
+batchedUpdates @ chunk-C73SNUHP.js?v=663168f1:3579
+dispatchEventForPluginEventSystem @ chunk-C73SNUHP.js?v=663168f1:7176
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-C73SNUHP.js?v=663168f1:5478
+dispatchEvent @ chunk-C73SNUHP.js?v=663168f1:5472
+dispatchDiscreteEvent @ chunk-C73SNUHP.js?v=663168f1:5449
+auth.ts:45 ❌ FRONTEND: Registration failed for maftunbekuroqov@gmail.com AxiosError {message: 'Request failed with status code 500', name: 'AxiosError', code: 'ERR_BAD_RESPONSE', config: {…}, request: XMLHttpRequest, …}
+overrideMethod @ hook.js:608
+register @ auth.ts:45
+await in register
+handleSubmit @ Login.tsx:28
+callCallback2 @ chunk-C73SNUHP.js?v=663168f1:3674
+invokeGuardedCallbackDev @ chunk-C73SNUHP.js?v=663168f1:3699
+invokeGuardedCallback @ chunk-C73SNUHP.js?v=663168f1:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-C73SNUHP.js?v=663168f1:3736
+executeDispatch @ chunk-C73SNUHP.js?v=663168f1:7016
+processDispatchQueueItemsInOrder @ chunk-C73SNUHP.js?v=663168f1:7036
+processDispatchQueue @ chunk-C73SNUHP.js?v=663168f1:7045
+dispatchEventsForPlugins @ chunk-C73SNUHP.js?v=663168f1:7053
+(anonymous) @ chunk-C73SNUHP.js?v=663168f1:7177
+batchedUpdates$1 @ chunk-C73SNUHP.js?v=663168f1:18941
+batchedUpdates @ chunk-C73SNUHP.js?v=663168f1:3579
+dispatchEventForPluginEventSystem @ chunk-C73SNUHP.js?v=663168f1:7176
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-C73SNUHP.js?v=663168f1:5478
+dispatchEvent @ chunk-C73SNUHP.js?v=663168f1:5472
+dispatchDiscreteEvent @ chunk-C73SNUHP.js?v=663168f1:5449
+Login.tsx:35 💥 Authentication error: Authentication failed
+overrideMethod @ hook.js:608
+handleSubmit @ Login.tsx:35
+await in handleSubmit
+callCallback2 @ chunk-C73SNUHP.js?v=663168f1:3674
+invokeGuardedCallbackDev @ chunk-C73SNUHP.js?v=663168f1:3699
+invokeGuardedCallback @ chunk-C73SNUHP.js?v=663168f1:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-C73SNUHP.js?v=663168f1:3736
+executeDispatch @ chunk-C73SNUHP.js?v=663168f1:7016
+processDispatchQueueItemsInOrder @ chunk-C73SNUHP.js?v=663168f1:7036
+processDispatchQueue @ chunk-C73SNUHP.js?v=663168f1:7045
+dispatchEventsForPlugins @ chunk-C73SNUHP.js?v=663168f1:7053
+(anonymous) @ chunk-C73SNUHP.js?v=663168f1:7177
+batchedUpdates$1 @ chunk-C73SNUHP.js?v=663168f1:18941
+batchedUpdates @ chunk-C73SNUHP.js?v=663168f1:3579
+dispatchEventForPluginEventSystem @ chunk-C73SNUHP.js?v=663168f1:7176
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-C73SNUHP.js?v=663168f1:5478
+dispatchEvent @ chunk-C73SNUHP.js?v=663168f1:5472
+dispatchDiscreteEvent @ chunk-C73SNUHP.js?v=663168f1:5449

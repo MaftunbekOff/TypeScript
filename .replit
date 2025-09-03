@@ -6,6 +6,7 @@ modules = ["python-3.11", "nodejs-20"]
 
 [nix]
 channel = "stable-24_05"
+packages = ["cargo", "libiconv", "libxcrypt", "openssl", "pkg-config", "postgresql", "rustc"]
 
 [gitHubImport]
 requiredFiles = [".replit", "replit.nix"]
