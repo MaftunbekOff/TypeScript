@@ -37,11 +37,30 @@ websocket_manager = WebSocketManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    await init_db()
-    await telegram_service.start()
-    yield
-    # Shutdown
-    await telegram_service.stop()
+    logger.info("🚀 BACKEND: Starting CrossMessenger...")
+    try:
+        global db
+        db = await init_db()
+        logger.info("✅ BACKEND: Database initialized")
+        
+        try:
+            await telegram_service.start()
+            logger.info("✅ BACKEND: Telegram service started")
+        except Exception as e:
+            logger.warning(f"⚠️  BACKEND: Telegram service failed to start: {e}")
+            
+        logger.info("🎉 BACKEND: CrossMessenger started successfully on port 5000")
+        yield
+    except Exception as e:
+        logger.error(f"❌ BACKEND: Startup failed: {e}")
+        yield
+    finally:
+        # Shutdown
+        logger.info("🛑 BACKEND: Shutting down...")
+        try:
+            await telegram_service.stop()
+        except:
+            pass
 
 app = FastAPI(title="CrossMessenger API", lifespan=lifespan)
 
@@ -94,21 +113,28 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 async def register(user_data: UserRegistration):
     logger.info(f"🔐 REGISTER ATTEMPT: Email={user_data.email}")
     
-    # Check if user exists
-    existing_user = await db.get_user_by_email(user_data.email)
-    if existing_user:
-        logger.warning(f"❌ REGISTER FAILED: User {user_data.email} already exists")
-        raise HTTPException(status_code=400, detail="User already exists")
-    
-    # Hash password
-    password_hash = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
-    # Create user
-    user_id = await db.create_user(user_data.email, password_hash)
-    token = create_access_token(user_id)
-    
-    logger.info(f"✅ REGISTER SUCCESS: User ID={user_id}, Email={user_data.email}")
-    return {"access_token": token, "token_type": "bearer"}
+    try:
+        # Check if user exists
+        existing_user = await db.get_user_by_email(user_data.email)
+        if existing_user:
+            logger.warning(f"❌ REGISTER FAILED: User {user_data.email} already exists")
+            raise HTTPException(status_code=400, detail="User already exists")
+        
+        # Hash password
+        password_hash = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Create user
+        user_id = await db.create_user(user_data.email, password_hash)
+        token = create_access_token(user_id)
+        
+        logger.info(f"✅ REGISTER SUCCESS: User ID={user_id}, Email={user_data.email}")
+        return {"access_token": token, "token_type": "bearer"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ REGISTER ERROR: {e}")
+        raise HTTPException(status_code=500, detail="Registration failed")
 
 @app.post("/api/auth/login")
 async def login(user_data: UserLogin):

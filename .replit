@@ -75,33 +75,13 @@ externalPort = 80
 expertMode = true
 
 [workflows]
-runButton = "Start CrossMessenger"
+runButton = "Start Backend"
 
 [[workflows.workflow]]
-name = "Start CrossMessenger"
-author = "user"
-mode = "parallel"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python3 main.py"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd frontend && npm install && npm run dev"
-
-[[workflows.workflow]]
-name = "Backend Only"
+name = "Start Backend"
+author = 45696961
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python3 main.py"
-
-[[workflows.workflow]]
-name = "Frontend Only"
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd frontend && npm run dev"

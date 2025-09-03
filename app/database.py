@@ -13,17 +13,41 @@ class Database:
         self.pool = None
         
     async def init_pool(self):
-        self.pool = await asyncpg.create_pool(
-            os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/crossmessenger")
-        )
+        try:
+            # Try to connect to PostgreSQL
+            self.pool = await asyncpg.create_pool(
+                os.getenv("DATABASE_URL", "postgresql://crossmessenger:password@localhost:5432/crossmessenger"),
+                min_size=1,
+                max_size=10,
+                command_timeout=60
+            )
+            logger.info("✅ DB: Database pool created successfully")
+        except Exception as e:
+            logger.error(f"❌ DB: Failed to create pool: {e}")
+            # Fallback to SQLite for development
+            import aiosqlite
+            logger.warning("⚠️  DB: Using SQLite fallback for development")
+            self.pool = None
         
     async def get_user_by_email(self, email: str) -> Optional[Dict]:
         logger.info(f"🔍 DB: Looking up user by email={email}")
-        async with self.pool.acquire() as conn:
-            row = await conn.fetchrow("SELECT * FROM users WHERE email = $1", email)
-            result = dict(row) if row else None
-            logger.info(f"{'✅' if result else '❌'} DB: User {'found' if result else 'not found'}")
-            return result
+        
+        if self.pool:
+            # PostgreSQL
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow("SELECT * FROM users WHERE email = $1", email)
+                result = dict(row) if row else None
+        else:
+            # SQLite fallback
+            import aiosqlite
+            async with aiosqlite.connect(self.sqlite_db) as conn:
+                conn.row_factory = aiosqlite.Row
+                cursor = await conn.execute("SELECT * FROM users WHERE email = ?", (email,))
+                row = await cursor.fetchone()
+                result = dict(row) if row else None
+                
+        logger.info(f"{'✅' if result else '❌'} DB: User {'found' if result else 'not found'}")
+        return result
             
     async def get_user_by_id(self, user_id: str) -> Optional[Dict]:
         async with self.pool.acquire() as conn:
@@ -32,13 +56,27 @@ class Database:
             
     async def create_user(self, email: str, password_hash: str) -> str:
         logger.info(f"💾 DB: Creating user with email={email}")
-        async with self.pool.acquire() as conn:
-            user_id = await conn.fetchval(
-                "INSERT INTO users (email, password_hash, created_at) VALUES ($1, $2, $3) RETURNING id",
-                email, password_hash, datetime.utcnow()
-            )
-            logger.info(f"✅ DB: User created with ID={user_id}")
-            return str(user_id)
+        
+        if self.pool:
+            # PostgreSQL
+            async with self.pool.acquire() as conn:
+                user_id = await conn.fetchval(
+                    "INSERT INTO users (email, password_hash, created_at) VALUES ($1, $2, $3) RETURNING id",
+                    email, password_hash, datetime.utcnow()
+                )
+        else:
+            # SQLite fallback
+            import aiosqlite
+            async with aiosqlite.connect(self.sqlite_db) as conn:
+                cursor = await conn.execute(
+                    "INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)",
+                    (email, password_hash, datetime.utcnow().isoformat())
+                )
+                user_id = cursor.lastrowid
+                await conn.commit()
+                
+        logger.info(f"✅ DB: User created with ID={user_id}")
+        return str(user_id)
             
     async def create_account(self, user_id: str, platform: str, platform_account_id: str, session_encrypted: str) -> str:
         async with self.pool.acquire() as conn:
@@ -135,7 +173,9 @@ async def init_db():
     await db.init_pool()
     
     # Create tables
-    async with db.pool.acquire() as conn:
+    if db.pool:
+        # PostgreSQL
+        async with db.pool.acquire() as conn:
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -169,19 +209,76 @@ async def init_db():
         """)
         
         await conn.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
-                id SERIAL PRIMARY KEY,
-                chat_id VARCHAR(255) NOT NULL,
-                platform VARCHAR(50) NOT NULL,
-                platform_message_id VARCHAR(255),
-                sender_id VARCHAR(255),
-                sender_name VARCHAR(255),
-                text TEXT,
-                attachments_json TEXT DEFAULT '[]',
-                timestamp TIMESTAMP DEFAULT NOW(),
-                status VARCHAR(50) DEFAULT 'sent'
-            )
-        """)
+                CREATE TABLE IF NOT EXISTS messages (
+                    id SERIAL PRIMARY KEY,
+                    chat_id VARCHAR(255) NOT NULL,
+                    platform VARCHAR(50) NOT NULL,
+                    platform_message_id VARCHAR(255),
+                    sender_id VARCHAR(255),
+                    sender_name VARCHAR(255),
+                    text TEXT,
+                    attachments_json TEXT DEFAULT '[]',
+                    timestamp TIMESTAMP DEFAULT NOW(),
+                    status VARCHAR(50) DEFAULT 'sent'
+                )
+            """)
+    else:
+        # SQLite fallback
+        logger.info("🔄 DB: Setting up SQLite fallback")
+        import aiosqlite
+        import os
         
-    logger.info("Database initialized")
+        db_path = "crossmessenger.db"
+        db.sqlite_db = db_path
+        
+        async with aiosqlite.connect(db_path) as conn:
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS accounts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    platform VARCHAR(50) NOT NULL,
+                    platform_account_id VARCHAR(255) NOT NULL,
+                    session_encrypted TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(user_id, platform, platform_account_id)
+                )
+            """)
+            
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS chats (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+                    chat_id VARCHAR(255) NOT NULL,
+                    title VARCHAR(255),
+                    last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(account_id, chat_id)
+                )
+            """)
+            
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    chat_id VARCHAR(255) NOT NULL,
+                    platform VARCHAR(50) NOT NULL,
+                    platform_message_id VARCHAR(255),
+                    sender_id VARCHAR(255),
+                    sender_name VARCHAR(255),
+                    text TEXT,
+                    attachments_json TEXT DEFAULT '[]',
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    status VARCHAR(50) DEFAULT 'sent'
+                )
+            """)
+            await conn.commit()
+        
+    logger.info("✅ Database initialized successfully")
     return db
